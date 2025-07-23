@@ -166,18 +166,25 @@
 							</execution>
 						</executions>
 					</plugin>
+					<!--Publishing -->
+					<plugin>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<version>0.8.0</version>
+						<extensions>true</extensions>
+						<configuration>
+							<publishingServerId>central</publishingServerId>
+							<!-- 自动发布 -->
+							<autoPublish>false</autoPublish>
+							<!-- 等待发布 -->
+							<!--<waitUntil>published</waitUntil>-->
+						</configuration>
+					</plugin>
+					
 				</plugins>
 			</build>
-			<distributionManagement>
-				<snapshotRepository>
-					<id>oss</id>
-					<url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
-				</snapshotRepository>
-				<repository>
-					<id>oss</id>
-					<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-				</repository>
-			</distributionManagement>
+			
+
 		</profile>
 	</profiles>
 

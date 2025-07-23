@@ -113,21 +113,24 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 	 */
 	private String resolveI18nText(String val) {
 
+		String message = StrUtil.EMPTY;
 		try {
 			String key = SwaggerUtil.getKey(val);
 			if (StrUtil.isNotBlank(key)) {
-				String message = StrUtil.EMPTY;
 				if (null != swaggerPlugin) {
 					message= swaggerPlugin.getMessage(key);
 				} 
 				if (StrUtil.isEmpty(message)&&null != messageSource) {
-					return messageSource.getMessage(key, null, swaggerProperties.getLocale());
+					message= messageSource.getMessage(key, null, swaggerProperties.getLocale());
+				}
+				if (StrUtil.isEmpty(message)) {
+					message = val;
 				}
 			}
 		} catch (Exception e) {
 			return e.getMessage();
 		}
-		return val;
+		return message;
 
 	}
 
