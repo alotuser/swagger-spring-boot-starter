@@ -3,7 +3,6 @@ package cn.alotuser.properties;
 import java.util.Locale;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 /**
  * SwaggerProperties
  */
