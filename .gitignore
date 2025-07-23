@@ -1,5 +1,6 @@
 /target/
 /.classpath
+/.gitattributes
 /.project
 /.factorypath
 /.settings
