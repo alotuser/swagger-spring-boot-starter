@@ -3,6 +3,7 @@ package cn.alotuser.config;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -31,6 +32,7 @@ import springfox.documentation.swagger.common.SwaggerPluginSupport;
  */
 @Configuration
 @Order(SwaggerPluginSupport.SWAGGER_PLUGIN_ORDER + 1000)
+@EnableConfigurationProperties(SwaggerProperties.class)
 public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyBuilderPlugin, ParameterBuilderPlugin, ModelBuilderPlugin {
 
 	@Autowired(required = false)

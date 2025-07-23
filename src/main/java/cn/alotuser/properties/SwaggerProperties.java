@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 /**
  * SwaggerProperties
  */
-@Component
 @ConfigurationProperties(prefix = "swagger")
 public class SwaggerProperties {
 
