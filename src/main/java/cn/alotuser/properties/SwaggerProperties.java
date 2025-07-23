@@ -3,10 +3,12 @@ package cn.alotuser.properties;
 import java.util.Locale;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import cn.alotuser.kit.Constants;
 /**
  * SwaggerProperties
  */
-@ConfigurationProperties(prefix = "swagger")
+@ConfigurationProperties(prefix = Constants.SWAGGER)
 public class SwaggerProperties {
 
 	/**
