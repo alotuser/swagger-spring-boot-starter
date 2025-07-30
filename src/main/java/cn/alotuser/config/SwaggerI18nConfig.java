@@ -1,6 +1,18 @@
 package cn.alotuser.config;
 
+import static java.util.Optional.ofNullable;
+import static java.util.stream.Collectors.toCollection;
+import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
+import static springfox.documentation.service.Tags.emptyTags;
+
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -12,17 +24,22 @@ import cn.alotus.core.util.StrUtil;
 import cn.alotuser.core.SwaggerMessagePlugin;
 import cn.alotuser.properties.SwaggerProperties;
 import cn.alotuser.util.SwaggerUtil;
+import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import springfox.documentation.builders.BuilderDefaults;
 import springfox.documentation.schema.ModelFacets;
 import springfox.documentation.schema.ModelSpecification;
+import springfox.documentation.service.Tag;
 import springfox.documentation.spi.DocumentationType;
 import springfox.documentation.spi.schema.ModelBuilderPlugin;
 import springfox.documentation.spi.schema.ModelPropertyBuilderPlugin;
 import springfox.documentation.spi.schema.contexts.ModelContext;
 import springfox.documentation.spi.schema.contexts.ModelPropertyContext;
+import springfox.documentation.spi.service.ApiListingBuilderPlugin;
 import springfox.documentation.spi.service.OperationBuilderPlugin;
 import springfox.documentation.spi.service.ParameterBuilderPlugin;
+import springfox.documentation.spi.service.contexts.ApiListingContext;
 import springfox.documentation.spi.service.contexts.OperationContext;
 import springfox.documentation.spi.service.contexts.ParameterContext;
 import springfox.documentation.swagger.common.SwaggerPluginSupport;
@@ -33,7 +50,7 @@ import springfox.documentation.swagger.common.SwaggerPluginSupport;
 @Configuration
 @Order(SwaggerPluginSupport.SWAGGER_PLUGIN_ORDER + 1000)
 @EnableConfigurationProperties(SwaggerProperties.class)
-public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyBuilderPlugin, ParameterBuilderPlugin, ModelBuilderPlugin {
+public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyBuilderPlugin, ParameterBuilderPlugin, ModelBuilderPlugin, ApiListingBuilderPlugin {
 
 	@Autowired(required = false)
 	private MessageSource messageSource;
@@ -105,6 +122,58 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		}
 	}
 
+	@SuppressWarnings("deprecation")
+	@Override
+	public void apply(ApiListingContext apiListingContext) {
+
+		Optional<? extends Class<?>> controller = apiListingContext.getResourceGroup().getControllerClass();
+		if (controller.isPresent()) {
+			Optional<Api> apiAnnotation = ofNullable(findAnnotation(controller.get(), Api.class));
+			String description = apiAnnotation.map(Api::description).map(BuilderDefaults::emptyToNull).orElse(null);
+			
+			if (StrUtil.isBlank(description)) {
+				description = apiAnnotation.map(Api::value).map(BuilderDefaults::emptyToNull).orElse(null);
+			}
+			
+			// Check if the description starts with the Swagger prefix
+			if (StrUtil.startWith(description, SwaggerUtil.SWAGGER_PRE)) {
+				description = resolveI18nText(description);
+			}
+
+			// If no OAS tags are present, fallback to Api annotation tags or resource group name
+			Set<Tag> oasTags = tagsFromOasAnnotations(controller.get());
+
+			Set<String> tagSet = new TreeSet<>();
+			if (oasTags.isEmpty()) {
+				Set<String> ts =apiAnnotation.map(tags()).orElse(new TreeSet<>());
+				tagSet.addAll(ts);
+				if (tagSet.isEmpty()) {
+					tagSet.add(apiListingContext.getResourceGroup().getGroupName());
+				}
+			} else {
+				oasTags=oasTags.stream().map(x -> new Tag(x.getName(), resolveI18nText(x.getDescription()))).collect(Collectors.toSet()); 
+			}
+			apiListingContext.apiListingBuilder().description(description).tagNames(tagSet).tags(oasTags);
+		}
+	}
+
+	private Set<Tag> tagsFromOasAnnotations(Class<?> controller) {
+		HashSet<Tag> controllerTags = new HashSet<>();
+		io.swagger.v3.oas.annotations.tags.Tags tags = findAnnotation(controller, io.swagger.v3.oas.annotations.tags.Tags.class);
+		if (tags != null) {
+			Arrays.stream(tags.value()).forEach(t -> controllerTags.add(new Tag(t.name(), t.description())));
+		}
+		io.swagger.v3.oas.annotations.tags.Tag tag = findAnnotation(controller, io.swagger.v3.oas.annotations.tags.Tag.class);
+		if (tag != null) {
+			controllerTags.add(new Tag(tag.name(), tag.description()));
+		}
+		return controllerTags;
+	}
+
+	private Function<Api, Set<String>> tags() {
+		return input -> Stream.of(input.tags()).filter(emptyTags()).collect(toCollection(TreeSet::new));
+	}
+
 	/**
 	 * Resolves the i18n text based on the provided value.
 	 *
@@ -118,14 +187,16 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 			String key = SwaggerUtil.getKey(val);
 			if (StrUtil.isNotBlank(key)) {
 				if (null != swaggerPlugin) {
-					message= swaggerPlugin.getMessage(key);
-				} 
-				if (StrUtil.isEmpty(message)&&null != messageSource) {
-					message= messageSource.getMessage(key, null, swaggerProperties.getLocale());
+					message = swaggerPlugin.getMessage(key);
+				}
+				if (StrUtil.isEmpty(message) && null != messageSource) {
+					message = messageSource.getMessage(key, null, swaggerProperties.getLocale());
 				}
 				if (StrUtil.isEmpty(message)) {
 					message = val;
 				}
+			} else {
+				message = val;
 			}
 		} catch (Exception e) {
 			return e.getMessage();
@@ -133,5 +204,6 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		return message;
 
 	}
+
 
 }
