@@ -15,9 +15,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 
 import cn.alotus.core.util.StrUtil;
@@ -43,6 +46,7 @@ import springfox.documentation.spi.service.contexts.ApiListingContext;
 import springfox.documentation.spi.service.contexts.OperationContext;
 import springfox.documentation.spi.service.contexts.ParameterContext;
 import springfox.documentation.swagger.common.SwaggerPluginSupport;
+import springfox.documentation.swagger.web.SwaggerApiListingReader;
 
 /**
  * * SwaggerI18nConfig is a configuration class that integrates internationalization (i18n) support into Swagger documentation. It uses either a MessageSource or a custom SwaggerMessagePlugin to resolve i18n text for API operations, parameters, and models.
@@ -68,6 +72,54 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 
 	}
 
+	@ConditionalOnProperty(prefix = "spring.main", name = "allow-bean-definition-overriding", havingValue = "true", matchIfMissing = false)
+	@Bean(name = "swaggerApiListingReader")
+	@Primary
+	SwaggerApiListingReader swaggerApiListingReader() {
+		return new SwaggerApiListingReader() {
+			@Override
+			public void apply(ApiListingContext apiListingContext) {
+				Optional<? extends Class<?>> controller = apiListingContext.getResourceGroup().getControllerClass();
+				if (controller.isPresent()) {
+					Optional<Api> apiAnnotation = ofNullable(findAnnotation(controller.get(), Api.class));
+					String description = apiAnnotation.map(Api::description).map(BuilderDefaults::emptyToNull).orElse(null);
+
+					if (StrUtil.isBlank(description)) {
+						description = apiAnnotation.map(Api::value).map(BuilderDefaults::emptyToNull).orElse(null);
+					}
+
+					// Check if the description starts with the Swagger prefix
+					if (StrUtil.startWith(description, SwaggerUtil.SWAGGER_PRE)) {
+						description = resolveI18nText(description);
+					}
+
+					// If no OAS tags are present, fallback to Api annotation tags or resource group name
+					Set<Tag> oasTags = tagsFromOasAnnotations(controller.get());
+
+					Set<String> tagSet = new TreeSet<>();
+					if (oasTags.isEmpty()) {
+						Set<String> ts = apiAnnotation.map(tags()).orElse(new TreeSet<>());
+						
+						ts.forEach(t -> {
+							tagSet.add(resolveI18nText(t));
+						});
+						
+						
+						if (tagSet.isEmpty()) {
+							tagSet.add(apiListingContext.getResourceGroup().getGroupName());
+						}
+					} else {
+						oasTags = oasTags.stream().map(x -> new Tag(resolveI18nText(x.getName()), resolveI18nText(x.getDescription()))).collect(Collectors.toSet());
+					}
+					apiListingContext.apiListingBuilder().description(description).tagNames(tagSet).tags(oasTags);
+
+				}
+			}
+		};
+	}
+	
+	
+	
 	@Override
 	public void apply(OperationContext context) {
 
@@ -141,19 +193,21 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 			}
 
 			// If no OAS tags are present, fallback to Api annotation tags or resource group name
-			Set<Tag> oasTags = tagsFromOasAnnotations(controller.get());
-
-			Set<String> tagSet = new TreeSet<>();
-			if (oasTags.isEmpty()) {
-				Set<String> ts =apiAnnotation.map(tags()).orElse(new TreeSet<>());
-				tagSet.addAll(ts);
-				if (tagSet.isEmpty()) {
-					tagSet.add(apiListingContext.getResourceGroup().getGroupName());
-				}
-			} else {
-				oasTags=oasTags.stream().map(x -> new Tag(x.getName(), resolveI18nText(x.getDescription()))).collect(Collectors.toSet()); 
-			}
-			apiListingContext.apiListingBuilder().description(description).tagNames(tagSet).tags(oasTags);
+//			Set<Tag> oasTags = tagsFromOasAnnotations(controller.get());
+//
+//			Set<String> tagSet = new TreeSet<>();
+//			if (oasTags.isEmpty()) {
+//				Set<String> ts = apiAnnotation.map(tags()).orElse(new TreeSet<>());
+//				ts.forEach(t -> {
+//					tagSet.add(resolveI18nText(t));
+//				});
+//				if (tagSet.isEmpty()) {
+//					tagSet.add(apiListingContext.getResourceGroup().getGroupName());
+//				}
+//			} else {
+//				oasTags=oasTags.stream().map(x -> new Tag(x.getName(), resolveI18nText(x.getDescription()))).collect(Collectors.toSet()); 
+//			}
+			apiListingContext.apiListingBuilder().description(description);
 		}
 	}
 
