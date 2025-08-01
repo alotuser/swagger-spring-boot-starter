@@ -77,6 +77,7 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 	@Primary
 	SwaggerApiListingReader swaggerApiListingReader() {
 		return new SwaggerApiListingReader() {
+			@SuppressWarnings("deprecation")
 			@Override
 			public void apply(ApiListingContext apiListingContext) {
 				Optional<? extends Class<?>> controller = apiListingContext.getResourceGroup().getControllerClass();
