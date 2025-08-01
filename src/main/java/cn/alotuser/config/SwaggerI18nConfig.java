@@ -72,6 +72,14 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 
 	}
 
+	/**
+	 * Creates a SwaggerApiListingReader bean that reads API listings and applies
+	 * i18n support to the API descriptions and tags. This bean is only created if
+	 * bean definition overriding is allowed in the Spring application context.
+	 *
+	 * @return a SwaggerApiListingReader instance that applies i18n support to API
+	 *         listings.
+	 */
 	@ConditionalOnProperty(prefix = "spring.main", name = "allow-bean-definition-overriding", havingValue = "true", matchIfMissing = false)
 	@Bean(name = "swaggerApiListingReader")
 	@Primary
@@ -120,7 +128,11 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 	}
 	
 	
-	
+	/**
+	 * Applies i18n support to API operations, parameters, and models by resolving
+	 * internationalized text for operation summaries, notes, parameter
+	 * descriptions, and model descriptions.
+	 */
 	@Override
 	public void apply(OperationContext context) {
 
@@ -138,6 +150,13 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 
 	}
 
+	/**
+	 * Applies i18n support to API parameters by resolving internationalized text
+	 * for parameter descriptions.
+	 *
+	 * @param context the parameter context containing information about the API
+	 *                parameter.
+	 */
 	@Override
 	public void apply(ParameterContext context) {
 		context.resolvedMethodParameter().findAnnotation(ApiParam.class).ifPresent(apiParam -> {
@@ -146,6 +165,12 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		});
 	}
 
+	/**
+	 * Applies i18n support to model specifications by resolving internationalized
+	 * text for model descriptions.
+	 *
+	 * @param context the model context containing information about the model.
+	 */
 	@Override
 	public void apply(ModelContext context) {
 
@@ -164,7 +189,9 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		}
 
 	}
-
+    /**
+     * Applies i18n support to model properties by resolving internationalized
+     */
 	@Override
 	public void apply(ModelPropertyContext context) {
 
@@ -175,6 +202,13 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		}
 	}
 
+	/**
+	 * Applies i18n support to API listings by resolving internationalized text for
+	 * API descriptions and tags.
+	 *
+	 * @param apiListingContext the context containing information about the API
+	 *                          listing.
+	 */
 	@SuppressWarnings("deprecation")
 	@Override
 	public void apply(ApiListingContext apiListingContext) {
@@ -212,6 +246,12 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		}
 	}
 
+	/**
+	 * Extracts tags from OAS annotations on the controller class.
+	 *
+	 * @param controller The controller class to inspect for OAS annotations.
+	 * @return A set of tags extracted from the OAS annotations.
+	 */
 	private Set<Tag> tagsFromOasAnnotations(Class<?> controller) {
 		HashSet<Tag> controllerTags = new HashSet<>();
 		io.swagger.v3.oas.annotations.tags.Tags tags = findAnnotation(controller, io.swagger.v3.oas.annotations.tags.Tags.class);
@@ -225,6 +265,12 @@ public class SwaggerI18nConfig implements OperationBuilderPlugin, ModelPropertyB
 		return controllerTags;
 	}
 
+	/**
+	 * * Returns a function that extracts and filters tags from the Api annotation.
+	 *
+	 * @return A function that takes an Api object and returns a set of non-empty
+	 *         tags.
+	 */
 	private Function<Api, Set<String>> tags() {
 		return input -> Stream.of(input.tags()).filter(emptyTags()).collect(toCollection(TreeSet::new));
 	}
